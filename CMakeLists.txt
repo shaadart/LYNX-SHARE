@@ -325,9 +325,15 @@ if(LYNX_BUILD_APP)
     FetchContent_Declare(
         JUCE
         GIT_REPOSITORY https://github.com/juce-framework/JUCE.git
-        GIT_TAG 8.0.4
+        GIT_TAG 8.0.17-security
         GIT_SHALLOW ON)
     FetchContent_MakeAvailable(JUCE)
+
+    add_executable(lynx_archive_tests tests/ArchiveSafetyTests.cpp)
+    target_include_directories(lynx_archive_tests PRIVATE src)
+    target_link_libraries(lynx_archive_tests PRIVATE juce::juce_core)
+    target_compile_definitions(lynx_archive_tests PRIVATE JUCE_USE_CURL=0)
+    add_test(NAME lynx_archive_tests COMMAND lynx_archive_tests)
 
     # JUCE fixes LYNX needs (Linux drag & drop from Wayland file managers, issue #11); see the file for details
     option(LYNX_PATCH_JUCE "Apply cmake/LynxPatchJuce.cmake to the JUCE sources" ON)

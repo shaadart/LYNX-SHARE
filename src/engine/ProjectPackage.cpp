@@ -1,5 +1,6 @@
 #include "platform/Paths.h"
 #include "engine/ProjectPackage.h"
+#include "engine/ArchiveSafety.h"
 
 #include "core/MissingFiles.h"
 #include "core/ProjectSafety.h"
@@ -105,9 +106,9 @@ bool collectSamples (const Song& song, const juce::File& folder, std::map<std::s
 juce::File extractZip (const juce::File& zipFile, const juce::File& destinationRoot, juce::String& error)
 {
     juce::ZipFile zip (zipFile);
-    if (zip.getNumEntries() == 0)
+    if (const auto r = archivesafety::validate (zip); r.failed())
     {
-        error = "not a project package (empty or not a zip file)";
+        error = r.getErrorMessage();
         return {};
     }
 
@@ -128,7 +129,7 @@ juce::File extractZip (const juce::File& zipFile, const juce::File& destinationR
         error = "could not create " + folder.getFullPathName();
         return {};
     }
-    if (const auto r = zip.uncompressTo (folder, false); r.failed()) // (JUCE refuses entries outside the folder)
+    if (const auto r = archivesafety::extract (zip, folder); r.failed())
     {
         error = r.getErrorMessage();
         return {};
@@ -142,6 +143,7 @@ juce::File extractZip (const juce::File& zipFile, const juce::File& destinationR
             return found.getFirst();
     }
     error = "the package has no project file (.lynx or .flp)";
+    folder.deleteRecursively();
     return {};
 }
 

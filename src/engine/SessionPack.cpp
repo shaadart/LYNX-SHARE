@@ -1,4 +1,5 @@
 #include "engine/SessionPack.h"
+#include "engine/ArchiveSafety.h"
 
 #include <juce_audio_formats/juce_audio_formats.h>
 #include <juce_events/juce_events.h>
@@ -688,19 +689,13 @@ void confine (Song& song, const juce::File& folder, const juce::File& engineFile
 std::optional<Manifest> readManifest (const juce::File& file, juce::String& error)
 {
     juce::ZipFile zip (file);
-    const auto index = zip.getIndexOfFileName ("manifest.json");
-    if (index < 0)
+    juce::String json;
+    if (const auto r = archivesafety::readManifest (zip, json); r.failed())
     {
-        error = "not a LYNX SHARE package (no manifest)";
+        error = r.getErrorMessage();
         return std::nullopt;
     }
-    std::unique_ptr<juce::InputStream> in (zip.createStreamForEntry (index));
-    if (in == nullptr)
-    {
-        error = "could not read the package";
-        return std::nullopt;
-    }
-    return manifestFromJson (in->readEntireStreamAsString(), error);
+    return manifestFromJson (json, error);
 }
 
 std::optional<Opened> open (const juce::File& file, const juce::File& destinationRoot, juce::String& error)
@@ -714,12 +709,6 @@ std::optional<Opened> open (const juce::File& file, const juce::File& destinatio
         error = "the package has no project";
         return std::nullopt;
     }
-    for (int i = 0; i < zip.getNumEntries(); ++i)
-        if (zip.getEntry (i)->isSymbolicLink) // (JUCE would create it, and copying "media" through it reads any file here)
-        {
-            error = "the package contains a link";
-            return std::nullopt;
-        }
     destinationRoot.createDirectory();
     const auto folder = destinationRoot.getNonexistentChildFile (juce::File::createLegalFileName (file.getFileNameWithoutExtension()), {}, false);
     if (! folder.createDirectory())
@@ -727,7 +716,7 @@ std::optional<Opened> open (const juce::File& file, const juce::File& destinatio
         error = "could not create " + folder.getFullPathName();
         return std::nullopt;
     }
-    if (const auto r = zip.uncompressTo (folder, false); r.failed()) // (JUCE refuses entries outside the folder)
+    if (const auto r = archivesafety::extract (zip, folder); r.failed())
     {
         error = r.getErrorMessage();
         return std::nullopt;
@@ -750,7 +739,10 @@ std::optional<Opened> open (const juce::File& file, const juce::File& destinatio
     }
     auto song = ProjectFile::load (opened.project, error);
     if (! song)
+    {
+        folder.deleteRecursively();
         return std::nullopt;
+    }
     // a received project may only use its own media (or FL Studio's own files: FL Keys' wavetables, the engines' DLLs)
     const auto flInstall = findFlStudioRoots().factoryData;
     confine (*song, folder, flInstall.empty() ? juce::File() : juce::File (str (flInstall)));

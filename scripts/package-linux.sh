@@ -52,10 +52,8 @@ EOF
 chmod 755 "$APPDIR/AppRun"
 
 TOOL="${APPIMAGETOOL:-$HOME/opt/appimagetool-$APPIMAGETOOL_VERSION-x86_64.AppImage}"
-if [[ ! -x "$TOOL" ]]; then
-    mkdir -p "$(dirname "$TOOL")"
-    curl -fsSL -o "$TOOL" "https://github.com/AppImage/appimagetool/releases/download/$APPIMAGETOOL_VERSION/appimagetool-x86_64.AppImage"
-    chmod +x "$TOOL"
+if [[ -z "${APPIMAGETOOL:-}" || ! -x "$TOOL" ]]; then
+    bash ./scripts/fetch-appimagetool.sh "$TOOL"
 fi
 # no FUSE needed to run the tool itself (containers, CI)
 # update information (AppImageUpdate): the newest release of Ka1-S/LYNX-SHARE, pre-releases included; appimagetool writes

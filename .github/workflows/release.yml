@@ -5,7 +5,7 @@
 # (a requirement of the SignPath Foundation code signing program; see docs/CODE_SIGNING.md).
 #
 #   version  (ubuntu)   reads the version (CMakeLists.txt) and the package label
-#   build    (ubuntu)   cross-compiles LYNX.exe with Zig 0.14.1 + JUCE 8.0.4 (scripts/build-windows-zig.sh)
+#   build    (ubuntu)   cross-compiles LYNX.exe with Zig 0.14.1 + JUCE 8.0.17-security (scripts/build-windows-zig.sh)
 #   sign     (ubuntu)   SignPath signing request; skipped until the repository variable SIGNPATH_ENABLED is 'true'
 #   package  (windows)  runs the self-test on the (signed) exe, builds Demo.lynx, the portable zip, the per-user
 #                       installer (NSIS, resources/installer/LYNX.nsi) and the Microsoft Store package (MSIX,
@@ -39,8 +39,8 @@ concurrency:
 env:
   ZIG_VERSION: 0.14.1
   ZIG_SHA256: 24aeeec8af16c381934a6cd7d95c807a8cb2cf7df9fa40d359aa884195c4716c
-  JUCE_VERSION: 8.0.4
-  JUCE_SHA256: 0effe9823a6fd8a4f98e5c08be7d308350e417b2d15dcf34011e778fefbbf005
+  JUCE_VERSION: 8.0.17-security
+  JUCE_SHA256: d37bab9f2330c50f42ba979575f6b55d5d3b23fa94221c2e57cac3abb69ac6d9
 
 jobs:
   version:

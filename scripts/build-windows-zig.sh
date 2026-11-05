@@ -7,7 +7,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 ZIG="${ZIG:-$HOME/opt/zig-x86_64-linux-0.14.1/zig}"
-JUCE_DIR="${JUCE_DIR:-$HOME/opt/juce-8.0.4}"
+JUCE_DIR="${JUCE_DIR:-$HOME/opt/juce-8.0.17-security}"
 OUT="${OUT:-build-win}"
 JOBS="${JOBS:-$(nproc)}"
 TARGET=x86_64-windows-gnu
@@ -22,7 +22,7 @@ mkdir -p "$OUT/juce" "$OUT/app" "$OUT/shim"
 echo '#include <dbghelp.h>' > "$OUT/shim/Dbghelp.h"
 
 MODULES=(juce_core juce_data_structures juce_events juce_graphics juce_gui_basics juce_gui_extra
-         juce_audio_basics juce_audio_devices juce_audio_formats juce_audio_processors juce_audio_utils juce_dsp juce_opengl)
+         juce_audio_basics juce_audio_devices juce_audio_formats juce_audio_processors_headless juce_audio_processors juce_audio_utils juce_dsp juce_opengl)
 
 {
     echo '#pragma once'
@@ -43,7 +43,7 @@ cmp -s "$OUT/JuceConfig.h.new" "$OUT/JuceConfig.h" 2>/dev/null && rm "$OUT/JuceC
 
 COMMON=(-target "$TARGET" -std=c++20 -O2 -DNDEBUG=1 -fno-sanitize=undefined
         -include "$OUT/JuceConfig.h" -include cmake/mingw/mingw_compat.h
-        -I"$OUT/shim" -I"$JUCE_DIR/modules" -I"$JUCE_DIR/modules/juce_audio_processors/format_types/VST3_SDK" -Ithird_party/clap/include -Ithird_party/wavpack/include -Ithird_party/vorbis/include -Ithird_party/lame/include -Ithird_party/asiosdk/common -Ithird_party/sse2neon -Ithird_party/pocketpy -Ithird_party/monocypher -Ithird_party/onnxruntime -Isrc)
+        -I"$OUT/shim" -I"$JUCE_DIR/modules" -I"$JUCE_DIR/modules/juce_audio_processors_headless/format_types/VST3_SDK" -Ithird_party/clap/include -Ithird_party/wavpack/include -Ithird_party/vorbis/include -Ithird_party/lame/include -Ithird_party/asiosdk/common -Ithird_party/sse2neon -Ithird_party/pocketpy -Ithird_party/monocypher -Ithird_party/onnxruntime -Isrc)
 
 # juce_gui_basics is compiled from a patched copy (cmake/LynxPatchJuce.cmake, issue #11: drag & drop fixes), so the
 # JUCE checkout itself is never modified. The copy is only replaced when its patched sources change (module cache).
@@ -123,7 +123,8 @@ export COMMON_STR="${COMMON[*]}"
 
 echo "Compiling JUCE modules (cached)..."
 # the modules and the extra units JUCE's CMake compiles along with them, in one parallel pool
-for m in "${MODULES[@]}" juce_core_CompilationTime juce_graphics_Harfbuzz juce_graphics_Sheenbidi; do echo "$m"; done | xargs -P "$JOBS" -I{} bash -c '
+for m in "${MODULES[@]}" juce_core_CompilationTime juce_graphics_Harfbuzz juce_graphics_Sheenbidi \
+         juce_gui_basics_{2,3,4,5} juce_audio_processors_headless_{ara,lv2_libs}; do echo "$m"; done | xargs -P "$JOBS" -I{} bash -c '
     m={}; obj="$OUT/juce/$m.o"
     if [[ ! -f "$obj" || ( "$OUT/JuceConfig.h" -nt "$obj" && "$m" != juce_graphics_Sheenbidi ) ]]; then
         echo "  JUCE $m"
@@ -137,6 +138,8 @@ for m in "${MODULES[@]}" juce_core_CompilationTime juce_graphics_Harfbuzz juce_g
         case "$m" in
             juce_core_CompilationTime) src="$JUCE_DIR/modules/juce_core/$m.cpp" ;;
             juce_graphics_Harfbuzz) src="$JUCE_DIR/modules/juce_graphics/$m.cpp" ;;
+            juce_gui_basics_*) src="$GUI_BASICS_SRC/$m.cpp"; key="$JUCE_KEY $GUI_BASICS_KEY" ;;
+            juce_audio_processors_headless_*) src="$JUCE_DIR/modules/juce_audio_processors_headless/$m.cpp" ;;
         esac
         if [[ "$m" == juce_graphics_Sheenbidi ]]; then
             cached "$obj" "$JUCE_DIR" -- "$ZIG" cc -target "$TARGET" -O2 -w -DJUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1 -I"$JUCE_DIR/modules" -c "$JUCE_DIR/modules/juce_graphics/juce_graphics_Sheenbidi.c" -o "$obj"

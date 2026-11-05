@@ -28,23 +28,9 @@ std::vector<std::uint8_t> bytesOf (const juce::MemoryBlock& m)
 }
 
 // VST3's .vstpreset through JUCE's VST3 host (in-process VST3 only)
-struct Vst3Access final : juce::ExtensionsVisitor
-{
-    std::function<void (const VST3Client&)> fn;
-    void visitVST3Client (const VST3Client& c) override
-    {
-        if (fn)
-            fn (c);
-    }
-};
-
 bool isVst3 (juce::AudioPluginInstance& plugin)
 {
-    bool found = false;
-    Vst3Access v;
-    v.fn = [&found] (const auto&) { found = true; };
-    plugin.getExtensions (v);
-    return found;
+    return plugin.getVST3Client() != nullptr;
 }
 
 void setParams (juce::AudioPluginInstance& plugin, const std::vector<float>& values)
@@ -216,15 +202,10 @@ bool load (juce::AudioPluginInstance& plugin, const juce::File& file, juce::Stri
         return loadFx (plugin, bytesOf (data), error);
     if (file.hasFileExtension ("vstpreset"))
     {
-        bool ok = false, vst3 = false;
-        Vst3Access v;
-        v.fn = [&] (const juce::ExtensionsVisitor::VST3Client& c) {
-            vst3 = true;
-            ok = c.setPreset (data);
-        };
-        plugin.getExtensions (v);
+        auto* client = plugin.getVST3Client();
+        const auto ok = client != nullptr && client->setPreset (data);
         if (! ok)
-            error = vst3 ? tr ("The plugin did not accept this preset (saved by another plugin?).")
+            error = client != nullptr ? tr ("The plugin did not accept this preset (saved by another plugin?).")
                          : tr ("Only VST3 plugins running inside LYNX SHARE read .vstpreset files.");
         return ok;
     }
@@ -242,15 +223,9 @@ bool save (juce::AudioPluginInstance& plugin, const juce::File& file, const juce
     }
     else if (file.hasFileExtension ("vstpreset"))
     {
-        bool vst3 = false;
-        juce::MemoryBlock data;
-        Vst3Access v;
-        v.fn = [&] (const juce::ExtensionsVisitor::VST3Client& c) {
-            vst3 = true;
-            data = c.getPreset();
-        };
-        plugin.getExtensions (v);
-        if (! vst3 || data.getSize() == 0)
+        const auto* client = plugin.getVST3Client();
+        const auto data = client != nullptr ? client->getPreset() : juce::MemoryBlock();
+        if (client == nullptr || data.getSize() == 0)
         {
             error = tr ("Only VST3 plugins running inside LYNX SHARE save .vstpreset files.");
             return false;

@@ -12,7 +12,7 @@ have () { [[ -x "$1" ]] && ok "$2" || bad "$2 (missing: $1)"; }
 echo "Tools"
 have "${ZIG_LOCAL:-$HOME/opt/zig-linux-x86_64-0.13.0/zig}" "zig 0.13.0 (tests)"
 have "${ZIG:-$HOME/opt/zig-x86_64-linux-0.14.1/zig}" "zig 0.14.1 (Windows build)"
-[[ -d "${JUCE_DIR:-$HOME/opt/juce-8.0.4}/modules" ]] && ok "JUCE 8.0.4" || bad "JUCE 8.0.4 (JUCE_DIR)"
+[[ -d "${JUCE_DIR:-$HOME/opt/juce-8.0.17-security}/modules" ]] && ok "JUCE 8.0.17-security" || bad "JUCE 8.0.17-security (JUCE_DIR)"
 command -v python3 >/dev/null && python3 -c 'import numpy' 2>/dev/null && ok "python3 + numpy" || bad "python3 + numpy"
 command -v git >/dev/null && ok "git" || bad "git"
 command -v gh >/dev/null || ls "$HOME"/opt/gh_*/bin/gh >/dev/null 2>&1 && ok "gh" || warn "gh (only needed to publish)"

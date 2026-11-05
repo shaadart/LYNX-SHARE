@@ -1168,7 +1168,7 @@ void ClapPluginFormat::createPluginInstance (const juce::PluginDescription& d, d
 
 void addPluginFormats (juce::AudioPluginFormatManager& manager)
 {
-    manager.addDefaultFormats();
+    juce::addDefaultFormatsToManager (manager);
     manager.addFormat (new ClapPluginFormat());
     manager.addFormat (new Vst2PluginFormat());
 }

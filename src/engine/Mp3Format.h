@@ -22,7 +22,8 @@ public:
     bool isCompressed() override { return true; }
 
     juce::AudioFormatReader* createReaderFor (juce::InputStream* source, bool deleteStreamIfOpeningFails) override;
-    juce::AudioFormatWriter* createWriterFor (juce::OutputStream*, double, unsigned int, int, const juce::StringPairArray&, int) override
+    std::unique_ptr<juce::AudioFormatWriter> createWriterFor (std::unique_ptr<juce::OutputStream>&,
+                                                            const juce::AudioFormatWriterOptions&) override
     {
         return nullptr; // read-only (export encodes with core/Mp3Encoder)
     }
